@@ -1,0 +1,122 @@
+# ============================
+# 🔐 VOCAPLY SECURITY .gitignore  
+# ============================
+
+# -------------------------
+# 🔑 Environment Variables (CRITICAL)
+# -------------------------
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+.env.*
+*.env
+!.env.example
+
+# -------------------------
+# 📦 Dependencies
+# -------------------------
+node_modules/
+.pnpm-store/
+
+# -------------------------
+# 🏗️ Build Output
+# -------------------------
+dist/
+dist-ssr/
+build/
+.output/
+*.local
+
+# -------------------------
+# 🔥 Firebase
+# -------------------------
+.firebase/
+*.cache
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+.firebaserc.backup
+
+# Firebase Functions Dependencies
+functions/node_modules/
+functions/.env
+functions/.env.*
+
+# Firebase project data (contains project IDs)
+projects.json
+projects.txt
+projects_robi.json
+final_projects.json
+final_projects_2.json
+
+# Local utility scripts
+parse_projects.js
+parse_projects.py
+parse_projects_2.js
+
+# -------------------------
+# 📝 Logs
+# -------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# -------------------------
+# 💻 Editor & IDE
+# -------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# -------------------------
+# 🖥️ OS Files
+# -------------------------
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# -------------------------
+# 🧪 Testing
+# -------------------------
+coverage/
+.nyc_output/
+*.lcov
+
+# -------------------------
+# 🔧 Misc
+# -------------------------
+*.pem
+*.key
+*.crt
+*.p12
+.cache
+.temp
+.tmp
+*.bak
+*.backup
+
+# -------------------------
+# 📊 Debug & Reports
+# -------------------------
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+.eslintcache

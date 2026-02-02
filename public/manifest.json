@@ -1,0 +1,44 @@
+{
+    "manifest_version": 3,
+    "name": "Vocaply - English to Bangla",
+    "version": "1.0.0",
+    "description": "Master your English to Bangla vocabulary seamlessly as you browse. Highlight to translate and save.",
+    "permissions": [
+        "storage",
+        "contextMenus",
+        "activeTab",
+        "notifications",
+        "alarms"
+    ],
+    "host_permissions": [
+        "https://*.firebasedatabase.app/",
+        "https://*.firestore.googleapis.com/"
+    ],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "action": {
+        "default_popup": "index.html",
+        "default_title": "Vocaply"
+    },
+    "icons": {
+        "16": "vite.svg",
+        "32": "vite.svg",
+        "48": "vite.svg",
+        "128": "vite.svg"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "contentScript.js"
+            ],
+            "css": [
+                "contentStyles.css"
+            ]
+        }
+    ]
+}
