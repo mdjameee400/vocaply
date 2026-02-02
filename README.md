@@ -257,10 +257,36 @@ vocaply/
 | Command | Description |
 |---------|-------------|
 | `firebase login` | Authenticate with Firebase CLI |
-| `firebase deploy` | Deploy to Firebase Hosting |
-| `firebase deploy --only hosting` | Deploy only hosting |
-| `firebase deploy --only firestore:rules` | Deploy Firestore rules |
-| `firebase deploy --only functions` | Deploy Cloud Functions |
+| `firebase deploy` | Deploy everything (hosting, rules, functions) |
+| `firebase deploy --only hosting` | Deploy only website changes |
+
+> **💡 Quick Tip**: To update your live link manually, always run `npm run build` first, then `firebase deploy --only hosting`.
+
+---
+
+## 🌍 Continuous Deployment (CI/CD)
+
+To keep your live link **automatically updated** every time you push code to GitHub, follow these steps:
+
+### 1. Initialize Firebase GitHub Action
+Run this command in your terminal and follow the prompts:
+```bash
+firebase init hosting:github
+```
+*   **For "For which GitHub repository?"**: Enter `mdjameee400/vocaply`
+*   **For "Set up a workflow to run a build script before every deploy?"**: Yes
+*   **For "What script should be run before every deploy?"**: `npm ci && npm run build`
+*   **For "Set up automatic deployment to your site's live channel when a PR is merged?"**: Yes
+*   **For "What is the name of the GitHub branch associated with your site's live channel?"**: `main`
+
+### 2. How it works
+Once set up, Firebase will create a file in `.github/workflows/`. Now, whenever you run:
+```bash
+git add .
+git commit -m "Your changes"
+git push origin main
+```
+GitHub will automatically build your app and deploy it to **https://vocaply.web.app/**. You don't have to run the deploy command manually anymore!
 
 ---
 

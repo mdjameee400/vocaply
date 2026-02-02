@@ -1,8 +1,9 @@
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import Sidebar from "@/components/Dashboard/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Star, TrendingUp, Search, LogOut, Volume2 } from "lucide-react"
+import { BookOpen, Star, TrendingUp, Search, LogOut, Volume2, Clock } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
@@ -10,10 +11,34 @@ import { useVocabulary } from "@/context/VocabularyContext"
 
 export default function UserHome() {
     const { user, logout } = useAuth()
-    const { words, toggleFavorite, favorites } = useVocabulary()
+    const { todayWords, toggleFavorite, favorites, userStats } = useVocabulary()
+    const [currentTime, setCurrentTime] = useState(new Date())
 
-    // Get the two specific words for the "Today" section
-    const todayWords = words.filter(w => w.english === "Ineffable" || w.english === "Ephemeral")
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date())
+        }, 1000)
+        return () => clearInterval(timer)
+    }, [])
+
+    // Format current date
+    const formatDate = () => {
+        return currentTime.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        })
+    }
+
+    // Format current time
+    const formatTime = () => {
+        return currentTime.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        })
+    }
 
     const handleSpeak = (text, e) => {
         e.stopPropagation();
@@ -35,8 +60,18 @@ export default function UserHome() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input className="pl-10 h-10 border-slate-200" placeholder="Search vocabulary..." />
                     </div>
+
+                    {/* Live Clock Section */}
                     <div className="flex items-center gap-4 ml-auto">
-                        <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 hidden md:inline-flex">Premium Plan</Badge>
+                        <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+                            <Clock size={16} className="text-primary animate-pulse" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">Live Time</span>
+                                <span className="text-xs font-bold text-slate-700 tabular-nums leading-none">{formatTime()}</span>
+                            </div>
+                        </div>
+
+                        <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 hidden md:inline-flex px-3 py-1 font-bold tracking-tight">Premium Plan</Badge>
                         <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block" />
                         <div className="flex items-center gap-3">
                             <div className="text-right hidden sm:block">
@@ -66,102 +101,110 @@ export default function UserHome() {
                                     <BookOpen className="text-primary" size={22} />
                                     Today's 2 Words
                                 </h2>
-                                <span className="text-sm text-slate-500 font-medium">
-                                    {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                <span className="text-sm text-slate-500 font-bold flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    {formatDate()}
                                 </span>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {todayWords.map((item) => (
-                                    <motion.div
-                                        key={item.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                    >
-                                        <Card className="border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden relative group">
-                                            <div className="absolute top-0 left-0 w-1.5 h-full bg-primary" />
-                                            <CardHeader className="pb-2">
-                                                <div className="flex justify-between items-start">
-                                                    <Badge variant="secondary" className="rounded-md font-bold bg-slate-100 text-slate-600 border-none px-3 py-1">
-                                                        {item.type || "Word"}
-                                                    </Badge>
-                                                    <div className="flex items-center gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-9 w-9 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-all"
-                                                            onClick={(e) => handleSpeak(item.english, e)}
-                                                        >
-                                                            <Volume2 size={18} />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => toggleFavorite(item.id)}
-                                                            className={`h-9 w-9 transition-all rounded-full ${item.isFavorite
-                                                                ? "text-amber-500 bg-amber-50"
-                                                                : "text-slate-400 hover:text-amber-500 hover:bg-amber-50"
-                                                                }`}
-                                                        >
-                                                            <Star size={18} className={item.isFavorite ? "fill-amber-500" : ""} />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                                <CardTitle className="text-4xl font-black mt-2 tracking-tight text-slate-900 line-clamp-1">{item.english}</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <p className="text-slate-500 mb-6 text-lg leading-relaxed font-medium line-clamp-2">"{item.usage}"</p>
-
-                                                <div className="space-y-4">
-                                                    <div className="p-4 bg-linear-to-br from-primary/5 to-transparent rounded-xl border border-primary/10 group-hover:border-primary/20 transition-colors">
-                                                        <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest block mb-1">Bangla Meaning</span>
-                                                        <span className="text-2xl font-black text-primary">{item.bangla}</span>
-                                                    </div>
-
-                                                    {(item.synonyms || item.antonyms) && (
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100">
-                                                            {item.synonyms && (
-                                                                <div className="space-y-2">
-                                                                    <div className="flex items-center gap-1.5 px-1">
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                                                        <span className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500">Synonyms</span>
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-1.5">
-                                                                        {item.synonyms.map(syn => (
-                                                                            <Badge key={syn} variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100/50 text-xs py-1 px-3 font-bold rounded-lg transition-colors">
-                                                                                {syn}
-                                                                            </Badge>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                            {item.antonyms && (
-                                                                <div className="space-y-2">
-                                                                    <div className="flex items-center gap-1.5 px-1">
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                                                        <span className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500">Antonyms</span>
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-1.5">
-                                                                        {item.antonyms.map(ant => (
-                                                                            <Badge key={ant} variant="secondary" className="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100/50 text-xs py-1 px-3 font-bold rounded-lg transition-colors">
-                                                                                {ant}
-                                                                            </Badge>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
+                                {todayWords.length > 0 ? (
+                                    todayWords.map((item) => (
+                                        <motion.div
+                                            key={item.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                        >
+                                            <Card className="border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden relative group">
+                                                <div className="absolute top-0 left-0 w-1.5 h-full bg-primary" />
+                                                <CardHeader className="pb-2">
+                                                    <div className="flex justify-between items-start">
+                                                        <Badge variant="secondary" className="rounded-md font-bold bg-slate-100 text-slate-600 border-none px-3 py-1 uppercase text-[10px] tracking-widest">
+                                                            {item.type || "Word"}
+                                                        </Badge>
+                                                        <div className="flex items-center gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-9 w-9 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-all"
+                                                                onClick={(e) => handleSpeak(item.english, e)}
+                                                            >
+                                                                <Volume2 size={18} />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => toggleFavorite(item.id)}
+                                                                className={`h-9 w-9 transition-all rounded-full ${item.isFavorite
+                                                                    ? "text-amber-500 bg-amber-50"
+                                                                    : "text-slate-400 hover:text-amber-500 hover:bg-amber-50"
+                                                                    }`}
+                                                            >
+                                                                <Star size={18} className={item.isFavorite ? "fill-amber-500" : ""} />
+                                                            </Button>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </motion.div>
-                                ))}
+                                                    </div>
+                                                    <CardTitle className="text-4xl font-black mt-2 tracking-tight text-slate-900 line-clamp-1">{item.english}</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-slate-500 mb-6 text-lg leading-relaxed font-medium line-clamp-2">"{item.usage}"</p>
+
+                                                    <div className="space-y-4">
+                                                        <div className="p-4 bg-linear-to-br from-primary/5 to-transparent rounded-xl border border-primary/10 group-hover:border-primary/20 transition-colors">
+                                                            <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest block mb-1">Bangla Meaning</span>
+                                                            <span className="text-2xl font-black text-primary">{item.bangla}</span>
+                                                        </div>
+
+                                                        {(item.synonyms || item.antonyms) && (
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                                                                {item.synonyms && (
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex items-center gap-1.5 px-1">
+                                                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                                                            <span className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500">Synonyms</span>
+                                                                        </div>
+                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                            {item.synonyms.map(syn => (
+                                                                                <Badge key={syn} variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100/50 text-xs py-1 px-3 font-bold rounded-lg transition-colors">
+                                                                                    {syn}
+                                                                                </Badge>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                {item.antonyms && (
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex items-center gap-1.5 px-1">
+                                                                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                                            <span className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500">Antonyms</span>
+                                                                        </div>
+                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                            {item.antonyms.map(ant => (
+                                                                                <Badge key={ant} variant="secondary" className="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100/50 text-xs py-1 px-3 font-bold rounded-lg transition-colors">
+                                                                                    {ant}
+                                                                                </Badge>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </motion.div>
+                                    ))
+                                ) : (
+                                    <div className="col-span-2 text-center py-12 bg-white rounded-xl border border-dashed border-slate-200">
+                                        <p className="text-slate-400 font-medium">Loading today's words...</p>
+                                    </div>
+                                )}
                             </div>
                         </section>
 
-                        {/* Quick Stats Grid */}
+                        {/* Quick Stats Grid - Dynamic Values */}
                         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-bold">
+                            {/* Learning Streak */}
                             <Card className="border-slate-200 border shadow-none bg-white">
                                 <CardContent className="pt-6">
                                     <div className="flex items-center gap-5">
@@ -170,11 +213,15 @@ export default function UserHome() {
                                         </div>
                                         <div>
                                             <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">Learning Streak</p>
-                                            <p className="text-3xl font-black text-slate-900 tracking-tight">12 Days</p>
+                                            <p className="text-3xl font-black text-slate-900 tracking-tight">
+                                                {userStats.streak} {userStats.streak === 1 ? 'Day' : 'Days'}
+                                            </p>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Total Words */}
                             <Card className="border-slate-200 border shadow-none bg-white">
                                 <CardContent className="pt-6">
                                     <div className="flex items-center gap-5">
@@ -183,11 +230,15 @@ export default function UserHome() {
                                         </div>
                                         <div>
                                             <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">Total Words</p>
-                                            <p className="text-3xl font-black text-slate-900 tracking-tight">{words.length + 422}</p>
+                                            <p className="text-3xl font-black text-slate-900 tracking-tight">
+                                                {userStats.totalWordsLearned}
+                                            </p>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Favorite Words */}
                             <Card className="border-slate-200 border shadow-none bg-white">
                                 <CardContent className="pt-6">
                                     <div className="flex items-center gap-5">
@@ -196,7 +247,9 @@ export default function UserHome() {
                                         </div>
                                         <div>
                                             <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">Favorite Words</p>
-                                            <p className="text-3xl font-black text-slate-900 tracking-tight">{favorites.length + 32}</p>
+                                            <p className="text-3xl font-black text-slate-900 tracking-tight">
+                                                {favorites.length}
+                                            </p>
                                         </div>
                                     </div>
                                 </CardContent>

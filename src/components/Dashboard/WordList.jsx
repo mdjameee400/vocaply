@@ -24,7 +24,12 @@ export default function WordList({ onlyFavorites = false }) {
     if (displayWords.length === 0) {
         return (
             <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
-                <p className="text-slate-400 font-medium">No words found in this section.</p>
+                <p className="text-slate-400 font-medium">
+                    {onlyFavorites
+                        ? "No favorite words yet. Click the star icon on any word to add it to your favorites!"
+                        : "No words found in this section."
+                    }
+                </p>
             </div>
         )
     }
@@ -54,13 +59,13 @@ export default function WordList({ onlyFavorites = false }) {
                         </div>
                         <div className="flex items-center gap-3">
                             <Badge variant="secondary" className="bg-primary/5 text-primary border-none font-bold px-3 py-1 text-[11px] uppercase tracking-wider">
-                                {word.date}
+                                {word.date || word.type || "Word"}
                             </Badge>
                             <button
                                 onClick={() => toggleFavorite(word.id)}
                                 className={`p-2 rounded-lg transition-all active:scale-90 ${word.isFavorite
-                                        ? "bg-amber-50 text-amber-500 hover:bg-amber-100"
-                                        : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                    ? "bg-amber-50 text-amber-500 hover:bg-amber-100"
+                                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                                     }`}
                             >
                                 <Star size={18} className={word.isFavorite ? "fill-amber-500" : ""} />

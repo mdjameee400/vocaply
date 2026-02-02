@@ -12,17 +12,19 @@ import {
 import { cn } from "@/lib/utils"
 import { Link, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
+import { useVocabulary } from "@/context/VocabularyContext"
 import logo from "../../img and video/logo-without-bg.png"
-
-const menuItems = [
-    { icon: Home, label: "Home", path: "/" },
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: Star, label: "Favorites", path: "/favorites" },
-]
 
 export default function Sidebar() {
     const location = useLocation()
     const { logout } = useAuth()
+    const { favorites } = useVocabulary()
+
+    const menuItems = [
+        { icon: Home, label: "Home", path: "/" },
+        { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+        { icon: Star, label: "Favorites", path: "/favorites", badge: favorites.length },
+    ]
 
     return (
         <aside className="w-64 border-r bg-white hidden lg:flex flex-col h-screen sticky top-0">
@@ -46,7 +48,17 @@ export default function Sidebar() {
                             )}
                         >
                             <item.icon size={20} />
-                            {item.label}
+                            <span className="flex-1">{item.label}</span>
+                            {item.badge !== undefined && item.badge > 0 && (
+                                <span className={cn(
+                                    "min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-xs font-bold",
+                                    isActive
+                                        ? "bg-white/20 text-white"
+                                        : "bg-amber-100 text-amber-600"
+                                )}>
+                                    {item.badge}
+                                </span>
+                            )}
                         </Link>
                     )
                 })}
