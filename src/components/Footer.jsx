@@ -1,4 +1,5 @@
-import { Languages, Github, Twitter, Linkedin } from "lucide-react"
+import { Github, Twitter, Linkedin } from "lucide-react"
+import logo from "@/img and video/logo-without-bg.png"
 
 export default function Footer() {
     return (
@@ -7,9 +8,7 @@ export default function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
                     <div className="md:col-span-1">
                         <div className="flex items-center gap-2 mb-6">
-                            <div className="flex items-center justify-center rounded-lg bg-primary p-2 text-primary-foreground">
-                                <Languages size={24} />
-                            </div>
+                            <img src={logo} alt="Vocaply" className="h-10 w-auto" />
                             <span className="text-xl font-bold tracking-tight">Vocaply</span>
                         </div>
                         <p className="text-muted-foreground text-sm leading-relaxed">
