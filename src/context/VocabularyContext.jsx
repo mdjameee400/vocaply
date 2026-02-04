@@ -1,13 +1,16 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/firebase/config';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, serverTimestamp, documentId } from 'firebase/firestore';
 
 const VocabularyContext = createContext();
 
-// Helper function to get date string in YYYY-MM-DD format
+// Helper function to get date string in YYYY-MM-DD format (Local Time)
 const getDateString = (date = new Date()) => {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
 // Helper function to calculate consecutive days between two dates
@@ -126,178 +129,218 @@ export const VocabularyProvider = ({ children }) => {
     // Words with isFavorite state
     const [words, setWords] = useState([]);
 
-    // Load/initialize user data from Firestore on login
+    // Today's words from Firestore
+    const [todayWords, setTodayWords] = useState([]);
+    const [loadingTodayWords, setLoadingTodayWords] = useState(true);
+
+    // Store full details of favorite words for search/display
+    const [favoritesData, setFavoritesData] = useState([]);
+
+    // Fetch today's words from Firestore
     useEffect(() => {
-        const initializeUserData = async () => {
-            if (!user || !db) {
-                // Reset to default state when logged out
-                setWords([]);
-                setUserStats({
-                    streak: 0,
-                    totalWordsLearned: 0,
-                    lastLoginDate: null,
-                    firstLoginDate: null
+        const fetchDailyWords = async () => {
+            if (!db) return;
+
+            setLoadingTodayWords(true);
+            const today = getDateString();
+
+            try {
+                const dailyWordsRef = collection(db, 'daily_words');
+                // Remove orderBy to avoid composite index requirement
+                const q = query(
+                    dailyWordsRef,
+                    where('date', '==', today)
+                );
+
+                const querySnapshot = await getDocs(q);
+                let fetchedWords = [];
+                querySnapshot.forEach((doc) => {
+                    fetchedWords.push({ id: doc.id, ...doc.data() });
                 });
-                return;
+
+                // Sort in-memory instead of in query
+                fetchedWords.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                console.log(`Fetched ${fetchedWords.length} words for date: ${today}`);
+
+                // Map to consistent format and handle favorites if user is logged in
+                const formattedWords = fetchedWords.map(word => ({
+                    ...word,
+                    english: word.word,
+                    bangla: word.meaning_bn,
+                    usage: word.sentence,
+                    isFavorite: user ? (userStats.favorites || []).includes(word.id) : false
+                }));
+
+                setTodayWords(formattedWords);
+            } catch (error) {
+                console.error("Error fetching daily words:", error);
+                setTodayWords([]);
+            } finally {
+                setLoadingTodayWords(false);
             }
+        };
+
+        fetchDailyWords();
+    }, [db, user, userStats.favorites]);
+
+    // Update user stats with daily logic (simplified for the new system)
+    useEffect(() => {
+        const syncUserStats = async () => {
+            if (!user || !db) return;
 
             const today = getDateString();
             const userRef = doc(db, 'users', user.uid);
 
             try {
                 const userDoc = await getDoc(userRef);
-
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     const lastLogin = userData.stats?.lastLoginDate || null;
-                    const firstLogin = userData.stats?.firstLoginDate || today;
                     let currentStreak = userData.stats?.streak || 1;
-                    let totalWords = userData.stats?.totalWordsLearned || 2;
-                    const savedFavorites = userData.favorites || [];
+                    let totalWords = userData.stats?.totalWordsLearned || 0;
 
-                    // Calculate streak & word growth based on ACTIVITY
                     if (lastLogin && lastLogin !== today) {
                         const daysDiff = getDaysDifference(lastLogin, today);
-
                         if (daysDiff === 1) {
-                            // Consecutive day activity!
                             currentStreak += 1;
-                            // Add 2 new words for this new active day
-                            totalWords += 2;
-                        } else if (daysDiff > 1) {
-                            // Activity resumed after a break
-                            currentStreak = 1; // Reset streak
-                            totalWords += 2;   // Still discovered 2 new words today
+                        } else {
+                            currentStreak = 1;
                         }
 
-                        // Update Firestore with new active stats
+                        // Update total words - assuming 2 new words per active day
+                        totalWords += 2;
+
                         await updateDoc(userRef, {
                             'stats.streak': currentStreak,
                             'stats.totalWordsLearned': totalWords,
                             'stats.lastLoginDate': today,
-                            'stats.lastActive': new Date()
+                            'stats.lastActive': serverTimestamp()
                         });
                     }
 
-                    // Show words based on how many the user has "unlocked" through activity
-                    // If totalWords is 4, show first 4 words from the master list
-                    const wordsToShow = Math.min(totalWords, allAvailableWords.length);
-
-                    const wordsWithState = allAvailableWords.slice(0, wordsToShow).map((word, index) => ({
-                        ...word,
-                        isFavorite: savedFavorites.includes(word.id),
-                        // Mark the last 2 unlocked words as "Today"
-                        date: index >= wordsToShow - 2 ? 'Today' : 'Earlier'
-                    }));
-
-                    setWords(wordsWithState);
-                    setUserStats({
+                    setUserStats(prev => ({
+                        ...prev,
                         streak: currentStreak,
                         totalWordsLearned: totalWords,
-                        lastLoginDate: today,
-                        firstLoginDate: firstLogin
-                    });
-                } else {
-                    // New user - initialize everything
-                    const initialWords = allAvailableWords.slice(0, 2).map(word => ({
-                        ...word,
-                        isFavorite: false,
-                        date: 'Today'
+                        favorites: userData.favorites || []
                     }));
-
+                } else {
+                    // Initialize new user
                     await setDoc(userRef, {
                         email: user.email,
-                        displayName: user.displayName,
-                        photoURL: user.photoURL,
-                        createdAt: new Date(),
+                        createdAt: serverTimestamp(),
                         favorites: [],
-                        preferences: { targetLanguage: 'Bangla', theme: 'light', dailyGoal: 5 },
                         stats: {
                             totalWordsLearned: 2,
                             streak: 1,
                             lastLoginDate: today,
-                            firstLoginDate: today,
-                            lastActive: new Date()
+                            lastActive: serverTimestamp()
                         }
                     });
-
-                    setWords(initialWords);
                     setUserStats({
                         streak: 1,
                         totalWordsLearned: 2,
-                        lastLoginDate: today,
-                        firstLoginDate: today
+                        favorites: []
                     });
                 }
             } catch (error) {
-                console.error("Error initializing user data:", error);
-                // Fallback to local state with first 2 words
-                const fallbackWords = allAvailableWords.slice(0, 2).map(word => ({
-                    ...word,
-                    isFavorite: false,
-                    date: 'Today'
-                }));
-                setWords(fallbackWords);
-                setUserStats({
-                    streak: 1,
-                    totalWordsLearned: 2,
-                    lastLoginDate: today,
-                    firstLoginDate: today
-                });
+                console.error("Error syncing user stats:", error);
             }
         };
 
-        initializeUserData();
-    }, [user]);
+        syncUserStats();
+    }, [user, db]);
 
-    // Toggle favorite and save to Firestore
-    const toggleFavorite = async (id) => {
-        setWords(prevWords =>
-            prevWords.map(word =>
-                word.id === id ? { ...word, isFavorite: !word.isFavorite } : word
-            )
-        );
+    // Fetch details for favorite words whenever userStats.favorites changes
+    useEffect(() => {
+        const fetchFavoritesDetails = async () => {
+            if (!db || !userStats.favorites || userStats.favorites.length === 0) {
+                setFavoritesData([]);
+                return;
+            }
 
-        // Update Firestore
-        if (user && db) {
             try {
-                const userRef = doc(db, 'users', user.uid);
-                const userDoc = await getDoc(userRef);
+                // Firestore 'in' query supports up to 10 items. 
+                // Since favorites can be many, we might need to batch or fetch individually.
+                // For simplicity and scalability with potentially many favorites, let's fetch individual/batch.
+                // A scalable app might duplicate this data or use a better search index (Algolia).
+                // Here, we'll fetch them because the list is likely small (<100) for a prototype.
 
-                if (userDoc.exists()) {
-                    const currentFavorites = userDoc.data().favorites || [];
-                    const wordIndex = currentFavorites.indexOf(id);
+                const dailyWordsRef = collection(db, 'daily_words');
 
-                    let newFavorites;
-                    if (wordIndex > -1) {
-                        // Remove from favorites
-                        newFavorites = currentFavorites.filter(fid => fid !== id);
-                    } else {
-                        // Add to favorites
-                        newFavorites = [...currentFavorites, id];
-                    }
+                // Chunking into batches of 10 for 'in' query
+                const chunks = [];
+                const favIds = userStats.favorites;
+                for (let i = 0; i < favIds.length; i += 10) {
+                    chunks.push(favIds.slice(i, i + 10));
+                }
 
-                    await updateDoc(userRef, {
-                        favorites: newFavorites
+                let allFavWords = [];
+                for (const chunk of chunks) {
+                    const q = query(dailyWordsRef, where(documentId(), 'in', chunk));
+                    const snapshot = await getDocs(q);
+                    snapshot.forEach(doc => {
+                        allFavWords.push({ id: doc.id, ...doc.data() });
                     });
                 }
+
+                const formattedFavs = allFavWords.map(word => ({
+                    ...word,
+                    english: word.word,
+                    bangla: word.meaning_bn,
+                    usage: word.sentence,
+                    isFavorite: true
+                }));
+
+                setFavoritesData(formattedFavs);
+
             } catch (error) {
-                console.error("Error updating favorites:", error);
+                console.error("Error fetching favorite details:", error);
             }
+        };
+
+        fetchFavoritesDetails();
+    }, [userStats.favorites, db]);
+
+    // Toggle favorite and save to Firestore
+    const toggleFavorite = async (wordId) => {
+        if (!user || !db) return;
+
+        try {
+            const userRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userRef);
+
+            if (userDoc.exists()) {
+                const currentFavorites = userDoc.data().favorites || [];
+                const isAlreadyFavorite = currentFavorites.includes(wordId);
+
+                let newFavorites;
+                if (isAlreadyFavorite) {
+                    newFavorites = currentFavorites.filter(id => id !== wordId);
+                } else {
+                    newFavorites = [...currentFavorites, wordId];
+                }
+
+                await updateDoc(userRef, { favorites: newFavorites });
+
+                // Update local state immediately for UI responsiveness
+                setUserStats(prev => ({ ...prev, favorites: newFavorites }));
+            }
+        } catch (error) {
+            console.error("Error toggling favorite:", error);
         }
     };
 
-    // Get favorites
-    const favorites = words.filter(w => w.isFavorite);
-
-    // Get today's words (last 2 words shown)
-    const todayWords = words.filter(w => w.date === 'Today');
+    // Favorites derived from userStats.favorites and a potential dictionary (omitted for brevity, or just filter todayWords)
+    const favoriteWords = []; // Logic to fetch full word details for favorites would go here
 
     const value = {
-        words,
-        toggleFavorite,
-        favorites,
         todayWords,
+        loadingTodayWords,
+        toggleFavorite,
+        favorites: userStats.favorites || [],
+        favoritesData, // Exposed for search
         userStats
     };
 

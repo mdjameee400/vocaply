@@ -4,9 +4,9 @@ import { MoreVertical, Volume2, Star } from "lucide-react"
 import { useVocabulary } from "@/context/VocabularyContext"
 
 export default function WordList({ onlyFavorites = false }) {
-    const { words, toggleFavorite, favorites } = useVocabulary()
+    const { todayWords, favoritesData, toggleFavorite } = useVocabulary()
 
-    const displayWords = onlyFavorites ? favorites : words
+    const displayWords = onlyFavorites ? favoritesData : todayWords
 
     const handleSpeak = (text, e) => {
         e.stopPropagation();

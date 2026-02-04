@@ -18,10 +18,16 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
-    // Dictionary: Read-only for authenticated users
+    // Directory: Read-only for authenticated users
     match /dictionary/{wordId} {
       allow read: if request.auth != null;
       allow write: if false; // Only admin via Firebase console
+    }
+
+    // Daily Words: Publicly readable for all users
+    match /daily_words/{wordId} {
+      allow read: if true;
+      allow write: if false; // Only admin via Firebase console/Admin SDK
     }
   }
 }
